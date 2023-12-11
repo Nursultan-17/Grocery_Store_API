@@ -15,6 +15,12 @@ urlpatterns = [
     path('сountry/<int:pk>', CountryDetailApiView.as_view()),
 
     path('orders', OrderApiView.as_view()),
+    path('orders/<int:pk>', OrderDetailApiView.as_view()),
+
+
+
+
+
 
     path('sign_in', AuthApiView.as_view()),
     path('sign_out', LogOutApiView.as_view()),

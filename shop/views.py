@@ -7,6 +7,7 @@ from rest_framework import permissions
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.parsers import MultiPartParser
+from rest_framework.viewsets import GenericViewSet,mixins
 
 from .models import *
 from .serializers import *
@@ -356,7 +357,7 @@ class ProductsDetailApiView(APIView):
         responses={
             200: ProductsSerializer(),
             400: 'Bad request',
-            403: 'Only admin can add products'
+            403: 'Only admin can change products'
         }
     )
     def patch(self, request, pk):
@@ -482,6 +483,7 @@ class LogOutApiView(APIView):
 
 class OrderApiView(APIView):
     permission_classes = [IsAuthenticated, ]
+    parser_classes = [MultiPartParser, ]
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -493,7 +495,8 @@ class OrderApiView(APIView):
         }
     )
     def get(self,request):
-        order = Order.objects.all()
+        user = request.user
+        order = Order.objects.filter(customer=user)
         if 'order_by' in request.GET.keys():
             ordering = request.GET.get('order_by')
             order = order.order_by(ordering)
@@ -505,23 +508,69 @@ class OrderApiView(APIView):
 
 
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['product',],
-            properties={
-                'name': openapi.Schema(type=openapi.TYPE_STRING),
-            }
-        ),
+        manual_parameters=[
+            openapi.Parameter(name='product',in_=openapi.IN_FORM,type=openapi.TYPE_INTEGER),
+            openapi.Parameter(name='delivery_address', in_=openapi.IN_FORM, type=openapi.TYPE_STRING),
+        ],
         responses={
-            200: CategorySerializer(),
-            400: 'Bad request'
+            200: OrderSerializer(),
+            400: 'Bad request',
         }
     )
     def post(self, request):
-        serializer = OrderCreateSerializer(data=request.data)
+        serializer = OrderCreateSerializer(data=request.data,context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderDetailApiView(APIView):
+    permission_classes = [permissions.AllowAny, ]
+    parser_classes = [MultiPartParser, ]
+
+    @swagger_auto_schema(responses={200: OrderSerializer()})
+    def get(self, request, pk):
+        order = Order.objects.get(id=pk)
+        data = ProductsSerializer(order).data
+        return Response(data, status=status.HTTP_200_OK)
+
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(name='product',in_=openapi.IN_FORM,type=openapi.TYPE_INTEGER),
+            openapi.Parameter(name='customer', in_=openapi.IN_FORM, type=openapi.TYPE_INTEGER),
+            openapi.Parameter(name='delivery_address', in_=openapi.IN_FORM, type=openapi.TYPE_STRING),
+            openapi.Parameter(name='status', in_=openapi.IN_FORM, type=openapi.TYPE_INTEGER),
+        ],
+        responses={
+            200: OrderSerializer(),
+            400: 'Bad request',
+            403: 'Only admin can change order'
+        }
+    )
+    def patch(self, request, pk):
+        if request.user.is_staff:
+            order = Order.objects.get(id=pk)
+            serializer = OrderSerializer(order, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': 'Only the admin can change the order'}, status=HTTP_403_FORBIDDEN)
+
+
+    @swagger_auto_schema(responses={200: 'Object is deleted!', 403: 'Only admin can delete a order'})
+    def delete(self, request, pk):
+        if request.user.is_staff:
+            order = Order.objects.get(id=pk)
+            order.delete()
+            return Response({'message': 'Object is deleted!'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'Only admin can delete a order'}, status=HTTP_403_FORBIDDEN)
+
+
+
 
 

@@ -1,5 +1,6 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer,Serializer
 from .models import *
+from rest_framework import serializers
 
 
 class CategorySerializer(ModelSerializer):
@@ -71,8 +72,24 @@ class OrderSerializer(ModelSerializer):
         model = Order
         fields = '__all__'
 
+    def to_representation(self, instance) -> dict:
+        representation = super().to_representation(instance)
+        representation['product'] = instance.product.name
+        representation['customer'] = instance.customer.email
+        representation['status'] = instance.status
+        return representation
+
 
 class OrderCreateSerializer(ModelSerializer):
     class Meta:
         model = Order
-        fields = ['product', 'customer', 'delivery_address', 'status',]
+        fields = ['product','delivery_address',]
+
+    def create(self,validated_data):
+        instance = super().create(validated_data)
+        instance.customer = self.context.get('request').user
+        instance.save()
+        return instance
+
+
+

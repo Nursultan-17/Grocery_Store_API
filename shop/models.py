@@ -16,6 +16,7 @@ UNIT_CHOICES = [
     ('ml', 'Milliliter'),
 ]
 
+
 class Customer(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
@@ -95,14 +96,29 @@ class Product(models.Model):
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
 
+
 class Order(models.Model):
+    STATUS_CHOISES = (
+        ('delivery','delivery'),
+        ("not delivery","not delivery")
+
+    )
     product = models.ForeignKey('Product', on_delete=models.CASCADE)
-    customer = models.ForeignKey('Customer', on_delete=models.CASCADE)
+    customer = models.ForeignKey('Customer',null=True,blank=True, on_delete=models.CASCADE)
     delivery_address = models.CharField(max_length=100)
     phone_customer = models.CharField(max_length=20,null=True,blank=True)
-    status = models.CharField(max_length=20)
+    status = models.CharField(max_length=20,default='not delevery',choices=STATUS_CHOISES)
 
     def save(self, *args, **kwargs):
-        self.phone_customer = self.customer.phone
+        if self.status == 'delivery':
+            self.customer.wallet +=500
+        if self.customer:
+            self.phone_customer = self.customer.phone
+        # if self.customer.wallet > 0:
         super().save(*args, **kwargs)
+
+
+
+
+
 
