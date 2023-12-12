@@ -541,7 +541,7 @@ class OrderDetailApiView(APIView):
             openapi.Parameter(name='product',in_=openapi.IN_FORM,type=openapi.TYPE_INTEGER),
             openapi.Parameter(name='customer', in_=openapi.IN_FORM, type=openapi.TYPE_INTEGER),
             openapi.Parameter(name='delivery_address', in_=openapi.IN_FORM, type=openapi.TYPE_STRING),
-            openapi.Parameter(name='status', in_=openapi.IN_FORM, type=openapi.TYPE_INTEGER),
+            openapi.Parameter(name='status', in_=openapi.IN_FORM, type=openapi.TYPE_STRING),
         ],
         responses={
             200: OrderSerializer(),

@@ -112,9 +112,13 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if self.status == 'delivery':
             self.customer.wallet +=500
+            self.customer.save()
         if self.customer:
             self.phone_customer = self.customer.phone
-        # if self.customer.wallet > 0:
+            if self.customer.wallet > 0:
+                self.product.price - self.customer.wallet
+                self.customer.wallet = 0
+                self.customer.save()
         super().save(*args, **kwargs)
 
 
