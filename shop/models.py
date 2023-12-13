@@ -107,18 +107,12 @@ class Order(models.Model):
     customer = models.ForeignKey('Customer',null=True,blank=True, on_delete=models.CASCADE)
     delivery_address = models.CharField(max_length=100)
     phone_customer = models.CharField(max_length=20,null=True,blank=True)
-    status = models.CharField(max_length=20,default='not delevery',choices=STATUS_CHOISES)
+    final_price = models.IntegerField(default=0)
+    status = models.CharField(max_length=20,default='not delivery',choices=STATUS_CHOISES)
 
     def save(self, *args, **kwargs):
-        if self.status == 'delivery':
-            self.customer.wallet +=500
-            self.customer.save()
         if self.customer:
             self.phone_customer = self.customer.phone
-            if self.customer.wallet > 0:
-                self.product.price - self.customer.wallet
-                self.customer.wallet = 0
-                self.customer.save()
         super().save(*args, **kwargs)
 
 

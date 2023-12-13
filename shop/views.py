@@ -7,7 +7,7 @@ from rest_framework import permissions
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.parsers import MultiPartParser
-from rest_framework.viewsets import GenericViewSet,mixins
+
 
 from .models import *
 from .serializers import *
@@ -518,7 +518,23 @@ class OrderApiView(APIView):
         }
     )
     def post(self, request):
-        serializer = OrderCreateSerializer(data=request.data,context={'request': request})
+        product = Product.objects.get(id=request.data['product'])
+        user = Customer.objects.get(email=request.user)
+        total = 0
+        if user.wallet > product.price:
+            user.wallet -= product.price
+            user.save()
+            total = 0
+        if user.wallet < product.price:
+            product.price -= user.wallet
+            total = product.price
+            user.wallet = 0
+            user.save()
+        if user.wallet == product.price:
+            user.wallet = 0
+            user.save()
+            total = 0
+        serializer = OrderCreateSerializer(data=request.data,context={'request': request,'final_price': total})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -532,13 +548,12 @@ class OrderDetailApiView(APIView):
     @swagger_auto_schema(responses={200: OrderSerializer()})
     def get(self, request, pk):
         order = Order.objects.get(id=pk)
-        data = ProductsSerializer(order).data
+        data = OrderSerializer(order).data
         return Response(data, status=status.HTTP_200_OK)
 
 
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter(name='product',in_=openapi.IN_FORM,type=openapi.TYPE_INTEGER),
             openapi.Parameter(name='customer', in_=openapi.IN_FORM, type=openapi.TYPE_INTEGER),
             openapi.Parameter(name='delivery_address', in_=openapi.IN_FORM, type=openapi.TYPE_STRING),
             openapi.Parameter(name='status', in_=openapi.IN_FORM, type=openapi.TYPE_STRING),
@@ -552,8 +567,12 @@ class OrderDetailApiView(APIView):
     def patch(self, request, pk):
         if request.user.is_staff:
             order = Order.objects.get(id=pk)
-            serializer = OrderSerializer(order, data=request.data, partial=True)
+            serializer = OrderPatchSerializer(order, data=request.data, partial=True, context={'request': request})
             if serializer.is_valid():
+                if request.data["status"] == "delivery":
+                    customer_wallet = Customer.objects.get(email=request.user)
+                    customer_wallet.wallet += 500
+                    customer_wallet.save()
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

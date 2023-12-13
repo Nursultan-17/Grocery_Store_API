@@ -70,7 +70,7 @@ class UserCreateSerializer(ModelSerializer):
 class OrderSerializer(ModelSerializer):
     class Meta:
         model = Order
-        fields = '__all__'
+        fields = ['id','product','customer','phone_customer','status','delivery_address','final_price']
 
     def to_representation(self, instance) -> dict:
         representation = super().to_representation(instance)
@@ -80,16 +80,33 @@ class OrderSerializer(ModelSerializer):
         return representation
 
 
-class OrderCreateSerializer(ModelSerializer):
+class OrderPatchSerializer(ModelSerializer):
     class Meta:
         model = Order
-        fields = ['product','delivery_address',]
+        fields = ['customer','phone_customer','status','delivery_address']
 
     def create(self,validated_data):
         instance = super().create(validated_data)
         instance.customer = self.context.get('request').user
         instance.save()
         return instance
+
+
+class OrderCreateSerializer(ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['product','delivery_address',]
+
+
+
+    def create(self,validated_data):
+        instance = super().create(validated_data)
+        instance.customer = self.context.get('request').user
+        instance.final_price = self.context.get('final_price')
+        instance.save()
+        return instance
+
+
 
 
 
